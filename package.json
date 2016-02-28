@@ -1,0 +1,13 @@
+{
+  "name": "ethereum-sandbox-client",
+  "version": "0.0.1",
+  "main": "client.js",
+  "dependencies": {
+    "async": "^1.5.2",
+    "lodash": "^4.5.1",
+    "request": "^2.69.0",
+    "sha3": "^1.2.0",
+    "solidity-compiler": "git+https://github.com/ether-camp/solidity-compiler.git",
+    "web3": "^0.15.2"
+  }
+}
