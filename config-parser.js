@@ -38,17 +38,6 @@ function parse(file, cb) {
         Object.keys(config.env).length === 0) {
       return cb('Please, add initial account(s) to ethereum.json');
     }
-
-    if (!config.hasOwnProperty('contracts')) {
-      return cb('Please, specify contracts directory in ethereum.json');
-    }
-    if (typeof config.contracts != 'string') {
-      return cb('Field contracts in ethereum.json should be a string');
-    }
-    config.contracts = _.startsWith(config.contracts, './') ?
-      '/' + config.contracts.substr(2) :
-      '/' + config.contracts;
-    if (!_.endsWith(config.contracts, '/')) config.contracts += '/';
     
     try {
       adjustTx();
