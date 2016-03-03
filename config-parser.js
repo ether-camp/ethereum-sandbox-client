@@ -10,7 +10,7 @@ var DEFAULT_TX = {
 };
 
 function parse(file, cb) {
-  var compiler = new Compiler('/root/workspace/eth-tests');
+  var compiler = new Compiler();
   
   async.waterfall([
     read.bind(null, file),
