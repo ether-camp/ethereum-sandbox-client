@@ -4,11 +4,6 @@ var fs = require('fs');
 var Compiler = require('solidity-compiler');
 var SHA3Hash = require('sha3').SHA3Hash;
 
-var DEFAULT_TX = {
-  gasPrice: 50000000000,
-  gasLimit: 3141592
-};
-
 function parse(file, cb) {
   var compiler = new Compiler();
   
@@ -40,7 +35,6 @@ function parse(file, cb) {
     }
     
     try {
-      adjustTx();
       adjustBlock();
     } catch (e) {
       return cb(e);
@@ -48,24 +42,6 @@ function parse(file, cb) {
 
     async.forEachOf(config.env.accounts, adjustAccount, _.partial(cb, _, config));
 
-    function adjustTx() {
-      if (config.hasOwnProperty('transaction')) {
-        var tx = config.transaction;
-        _.each(['gasPrice', 'gasLimit'], function(field) {
-          if (tx.hasOwnProperty(field)) {
-            try {
-              tx[field] = value(tx[field]);
-            } catch(e) {
-              throw 'Could not parse transaction.' + field + ': ' + e;
-            }
-          } else {
-            tx[field] = DEFAULT_TX[field];
-          }
-        });
-      } else {
-        config.transaction = DEFAULT_TX;
-      }
-    }
     function adjustBlock() {
       if (config.env.hasOwnProperty('block')) {
         var block = config.env.block;
@@ -78,7 +54,7 @@ function parse(file, cb) {
         }
         
         _.each(
-          ['difficulty', 'gasLimit', 'number', 'timestamp'],
+          ['difficulty', 'gasLimit', 'gasPrice'],
           function(field) {
             if (block.hasOwnProperty(field)) {
               try {
@@ -94,6 +70,9 @@ function parse(file, cb) {
     function adjustAccount(account, address, cb) {
       try {
         parseAddress(address);
+        
+        if (account.hasOwnProperty('name') && typeof account.name != 'string')
+          throw 'Account name must be a string';
         
         _.each(['balance', 'nonce'], function(field) {
           if (account.hasOwnProperty(field)) {
