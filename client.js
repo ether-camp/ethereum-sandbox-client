@@ -1,7 +1,9 @@
+var url = require('url');
 var _ = require('lodash');
 var async = require('async');
 var request = require('request');
 var Web3 = require('web3');
+var SandboxContainer = require('ethereum-sandbox-test');
 var configParser = require('./config-parser');
 
 function Sandbox(rootUrl) {
@@ -15,62 +17,101 @@ Sandbox.prototype.start = function(config, cb) {
     config = 'ethereum.json';
   }
   
-  configParser.parse(config, (function(err, config) {
+  async.series([
+    this.parseConfig.bind(this, config),
+    this.connectOrRun.bind(this),
+    this.startSandbox.bind(this)
+  ], cb);
+};
+
+Sandbox.prototype.parseConfig = function(path, cb) {
+  configParser.parse(path, (function(err, config) {
     if (err) return cb(err);
-    
-    var accounts = _(config.env.accounts)
-      .toPairs()
-      .filter(function(account) {
-        return account[1].hasOwnProperty('pkey');
-      })
-      .reduce(function(result, account) {
-        result[account[0]] = {
-          pkey: account[1].pkey,
-          'default': account[1]['default']
-        };
-        return result;
-      }, {});
-  
-    this.web3 = new Web3();
-    extend(this.web3);
-  
-    async.series([
-      create.bind(this),
-      this.web3.sandbox.setBlock.bind(this.web3.sandbox, config.env.block),
-      this.web3.sandbox.createAccounts.bind(this.web3.sandbox, config.env.accounts),
-      this.web3.sandbox.addAccounts.bind(this.web3.sandbox, accounts),
-      setDefaultAccount.bind(this),
-    ], (function(err) {
-      cb(err, this);
-    }).bind(this));
-  
-    function create(cb) {
+    this.config = config;
+    cb();
+  }).bind(this));
+};
+
+Sandbox.prototype.connectOrRun = function(cb) {
+  request(this.rootUrl, (function(err, response, body) {
+    if (err) {
+      if (err.code == 'ECONNREFUSED' && err.address == '127.0.0.1') {
+        return this.run(createWeb3.bind(this, cb));
+      } else return cb(err);
+    } else {
+      var notSandboxMsg = 'There is a service running on ' + this.rootUrl + ' which is not Sandbox.';
+      try {
+        var parsed = JSON.parse(body);
+      } catch (e) {
+        return cb(notSandboxMsg);
+      }
+      if (!_.isArray(parsed)) return cb(notSandboxMsg);
       
-      request.post({ url: this.rootUrl, json: true }, (function(err, res, reply) {
-        if (err) return cb(err);
-        this.id = reply.id;
-        this.web3.setProvider(new Web3.providers.HttpProvider(this.rootUrl + reply.id));
-        cb();
-      }).bind(this));
+      createWeb3.call(this, cb);
     }
     
-    function setDefaultAccount(cb) {
-      this.web3.sandbox.defaultAccount((function(err, address) {
-        if (err) cb(err);
-        else {
-          this.web3.eth.defaultAccount = address;
-          cb();
-        }
-      }).bind(this));
+    function createWeb3(cb) {
+      this.web3 = new Web3();
+      extend(this.web3);
+      cb();
     }
   }).bind(this));
 };
 
+Sandbox.prototype.run = function(cb) {
+  var port = url.parse(this.rootUrl).port || 80;
+  SandboxContainer.startDetached(port, cb);
+};
+
+Sandbox.prototype.startSandbox = function(cb) {
+  var accounts = _(this.config.env.accounts)
+    .toPairs()
+    .filter(function(account) {
+      return account[1].hasOwnProperty('pkey');
+    })
+    .reduce(function(result, account) {
+      result[account[0]] = {
+        pkey: account[1].pkey,
+        'default': account[1]['default']
+      };
+      return result;
+    }, {});
+
+  async.series([
+    create.bind(this),
+    this.web3.sandbox.setBlock.bind(this.web3.sandbox, this.config.env.block),
+    this.web3.sandbox.createAccounts.bind(this.web3.sandbox, this.config.env.accounts),
+    this.web3.sandbox.addAccounts.bind(this.web3.sandbox, accounts),
+    setDefaultAccount.bind(this),
+  ], (function(err) {
+    cb(err, this);
+  }).bind(this));
+
+  function create(cb) {
+    request.post({ url: this.rootUrl, json: true }, (function(err, res, reply) {
+      if (err) return cb(err);
+      this.id = reply.id;
+      this.web3.setProvider(new Web3.providers.HttpProvider(this.rootUrl + reply.id));
+      cb();
+    }).bind(this));
+  }
+  
+  function setDefaultAccount(cb) {
+    this.web3.sandbox.defaultAccount((function(err, address) {
+      if (err) cb(err);
+      else {
+        this.web3.eth.defaultAccount = address;
+        cb();
+      }
+    }).bind(this));
+  }
+};
+
 Sandbox.prototype.stop = function(cb) {
-  request.del(this.rootUrl + this.id, function(err, res) {
+  request.del(this.rootUrl + this.id, (function(err, res) {
     if (err) cb(err);
-    else cb(res.statusCode === 200 ? null : 'Response status ' + res.statusCode, null);
-  });
+    else cb(res.statusCode == 200 ? null : 'Could not stop the sandbox: ' + res.statusCode);
+  }).bind(this));
 };
 
 function extend(web3) {

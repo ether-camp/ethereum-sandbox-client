@@ -4,10 +4,11 @@
   "main": "client.js",
   "dependencies": {
     "async": "^1.5.2",
+    "ethereum-sandbox-test": "0.0.5",
     "lodash": "^4.5.1",
     "request": "^2.69.0",
     "sha3": "^1.2.0",
-    "solidity-compiler": "git+https://github.com/ether-camp/solidity-compiler.git",
+    "solc": "^0.3.5",
     "web3": "^0.15.2"
   }
 }

@@ -1,12 +1,10 @@
 var _ = require('lodash');
 var async = require('async');
 var fs = require('fs');
-var Compiler = require('solidity-compiler');
+var solc = require('solc');
 var SHA3Hash = require('sha3').SHA3Hash;
 
 function parse(file, cb) {
-  var compiler = new Compiler();
-  
   async.waterfall([
     read.bind(null, file),
     adjustValues,
@@ -101,20 +99,32 @@ function parse(file, cb) {
         return cb(e);
       }
       if (account.hasOwnProperty('source')) {
-        // if (!_.startsWith(account.source, './')) {
-        //   if (account.source.charAt(0) == '/')
-        //     account.source = '.' + account.source;
-        //   else
-        //     account.source = './' + account.source;
-        // }
-        compiler.compile(account.source, function(err, compiled) {
-          if (err) return cb(err);
-          if (compiled.length !== 1)
-            return cb('File specified in source property of ethereum.json should contain only one contract');
-          account.runCode = compiled[0];
-          cb();
+        var input = {};
+        input[account.source] = fs.readFileSync(account.source).toString();
+        var output = solc.compile({ sources: input }, 1, function(path) {
+          try {
+            return fs.readFileSync(path);
+          } catch (e) {
+            return { error: e };
+          }
         });
-      } else cb();
+        if (output.errors) return cb(output.errors);
+        
+        var compiled = findNotAbstractContracts(output.sources)
+          .map(function(name) {
+            return {
+              name: name,
+              binary: output.contracts[name].bytecode,
+              abi: JSON.parse(output.contracts[name].interface)
+            };
+          });
+
+        if (compiled.length !== 1)
+          return cb('File specified in source property of ethereum.json should contain only one contract to deploy');
+        account.runCode = compiled[0];
+      }
+      
+      cb();
     }
     function value(val) {
       var type = typeof val;
@@ -162,6 +172,43 @@ function sha3(str) {
   var hash = new SHA3Hash(256);
   hash.update(str);
   return '0x' + hash.digest('hex');
+}
+
+function findNotAbstractContracts(sources) {
+  return _(sources).map(function(source) {
+    return _(extractContracts(source.AST))
+      .filter({ abstract: false })
+      .map('name')
+      .value();
+  }).flatten().value();
+  
+  function extractContracts(node) {
+    var contracts = _(node.children)
+          .map(extractContracts)
+          .flatten()
+          .value();
+    if (node.name === 'Contract') {
+      contracts.push({
+        name: node.attributes.name,
+        abstract: isAbstract(node)
+      });
+    }
+    return contracts;
+  }
+  
+  function isAbstract(node) {
+    return node.attributes.name === 'abstract' ||
+      // solc <= 0.2.0
+      _.filter(node.children, {
+        name: 'Identifier',
+        attributes: { value: 'abstract' }
+      }).length != 0 ||
+      // solc > 0.2.0
+      _.filter(node.children, {
+        name: 'UserDefinedTypeName',
+        attributes: { name: 'abstract' }
+      }).length != 0;
+  }
 }
 
 module.exports = {
