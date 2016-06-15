@@ -126,6 +126,8 @@ function compile(dir, files) {
 }
 ```
 
+Also, there're tests for [DAO](https://github.com/ether-camp/DAO/tree/master/test).
+
 ## API
 
 **new Sandbox(url)**
