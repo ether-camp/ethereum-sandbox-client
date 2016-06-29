@@ -53,7 +53,10 @@ Sandbox.prototype.connectOrRun = function(cb) {
   request(this.rootUrl, (function(err, response, body) {
     if (err) {
       if (err.code == 'ECONNREFUSED' && err.address == '127.0.0.1') {
-        return this.run(createWeb3.bind(this, cb));
+        this.run((function(err) {
+          if (err) cb(err);
+          else createWeb3.call(this, cb);
+        }).bind(this));
       } else return cb(err);
     } else {
       var notSandboxMsg = 'There is a service running on ' + this.rootUrl + ' which is not Sandbox.';
