@@ -179,6 +179,16 @@ function extend(web3) {
         name: 'receipt',
         call: 'sandbox_receipt',
         params: 1
+      }),
+      new web3._extend.Method({
+        name: 'pauseMiner',
+        call: 'sandbox_pauseMiner',
+        params: 0
+      }),
+      new web3._extend.Method({
+        name: 'resumeMiner',
+        call: 'sandbox_resumeMiner',
+        params: 0
       })
     ],
     properties: [
