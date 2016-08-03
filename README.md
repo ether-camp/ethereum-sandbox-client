@@ -1,15 +1,23 @@
 # Ethereum Sandbox Client
 
-The module is a client for Ethereum Sandbox.
+The module is a client for [Ethereum Sandbox](https://github.com/etherj/ethereum-sandbox).
 
-Example of usage:
+## Installation
+
+```
+$ npm install ethereum-sandbox-client
+```
+
+## Example
+
 ```js
 var Sandbox = require('ethereum-sandbox-client');
 var sandbox = new Sandbox('http://localhost:8555');
 
-sandbox.start(function(err, sandbox) {
+sandbox.start(function(err) {
   if (err) return console.error(err);
   console.log('sandbox started: ' + sandbox.id);
+  console.log(sandbox.web3.coinbase);
   sandbox.stop(function(err) {
     if (err) console.error(err);
     else console.log('sandbox stopped');
@@ -126,7 +134,7 @@ function compile(dir, files) {
 }
 ```
 
-Also, there're tests for [DAO](https://github.com/ether-camp/DAO/tree/master/test).
+Also, there're tests for the [DAO](https://github.com/ether-camp/DAO/tree/master/test).
 
 ## API
 
@@ -136,13 +144,17 @@ Create a new object which is able to run a sandbox on Sandbox Container with the
 
 **sandbox.start([config,] cb)**
 
-Start a new sandbox in Sandbox Container. The client checks if there is a running Sandbox Container on the specified in the constructor URL. If not it starts a new Sandbox Container if the URL points to a localhost.
+Start a new sandbox in Sandbox Container. The client checks if there is a running Sandbox Container on the specified in the constructor URL. If not and if the URL points to localhost it runs Sandbox Container.
 
-If **config** is specified, it is used as a config for the new sandbox. Otherwise it uses `ethereum.json` in the project directory.
+If **config** is specified, it is used as a config for the new sandbox. Otherwise the client uses `ethereum.json` in the project directory.
+
+`cb` is a callback function (`function(err) {`) which is called when sendbox has been started.
 
 **sandbox.stop(cb)**
 
 Stop the started sandbox.
+
+`cb` is a callback function (`function(err) {`) which is called when sandbox has been stopped.
 
 **sandbox.web3**
 
