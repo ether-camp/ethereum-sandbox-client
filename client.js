@@ -20,6 +20,7 @@ var _ = require('lodash');
 var async = require('async');
 var request = require('request');
 var Web3 = require('web3');
+var web3Utils = require('web3/lib/utils/utils');
 var SandboxContainer = require('ethereum-sandbox');
 var configParser = require('./config-parser');
 
@@ -182,6 +183,28 @@ function extend(web3) {
         name: 'receipt',
         call: 'sandbox_receipt',
         params: 1
+      }),
+      new web3._extend.Method({
+        name: 'stopMiner',
+        call: 'sandbox_stopMiner',
+        params: 0
+      }),
+      new web3._extend.Method({
+        name: 'startMiner',
+        call: 'sandbox_startMiner',
+        params: 0
+      }),
+      new web3._extend.Method({
+        name: 'mine',
+        call: 'sandbox_mine',
+        params: 1,
+        inputFormatter: [ web3Utils.toHex ]
+      }),
+      new web3._extend.Method({
+        name: 'mine',
+        call: 'sandbox_setTimestamp',
+        params: 1,
+        inputFormatter: [ web3Utils.toHex ]
       })
     ],
     properties: [
