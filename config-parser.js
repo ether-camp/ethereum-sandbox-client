@@ -192,12 +192,16 @@ function sha3(str) {
 }
 
 function findNotAbstractContracts(sources) {
-  return _(sources).map(function(source) {
-    return _(extractContracts(source.AST))
-      .filter({ abstract: false })
-      .map('name')
-      .value();
-  }).flatten().value();
+  return _(sources)
+    .pickBy(function(value, key) { return _.endsWith(key, '.sol') })
+    .map(function(source) {
+      return _(extractContracts(source.AST))
+        .filter({ abstract: false })
+        .map('name')
+        .value();
+    })
+    .flatten()
+    .value();
   
   function extractContracts(node) {
     var contracts = _(node.children)
