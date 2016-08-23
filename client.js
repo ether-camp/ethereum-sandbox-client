@@ -201,7 +201,7 @@ function extend(web3) {
         inputFormatter: [ web3Utils.toHex ]
       }),
       new web3._extend.Method({
-        name: 'mine',
+        name: 'setTimestamp',
         call: 'sandbox_setTimestamp',
         params: 1,
         inputFormatter: [ web3Utils.toHex ]
