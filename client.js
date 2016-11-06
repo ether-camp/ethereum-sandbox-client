@@ -203,8 +203,8 @@ function extend(web3) {
       new web3._extend.Method({
         name: 'setTimestamp',
         call: 'sandbox_setTimestamp',
-        params: 1,
-        inputFormatter: [ web3Utils.toHex ]
+        params: 2,
+        inputFormatter: [ web3Utils.toHex, null ]
       })
     ],
     properties: [
