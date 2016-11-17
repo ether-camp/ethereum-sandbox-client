@@ -29,21 +29,21 @@ function Sandbox(rootUrl) {
   this.rootUrl = rootUrl + 'sandbox/';
 }
 
-Sandbox.prototype.start = function(config, cb) {
+Sandbox.prototype.start = function(config, specificSolc, cb) {
   if (_.isFunction(config)) {
     cb = config;
     config = 'ethereum.json';
   }
   
   async.series([
-    this.parseConfig.bind(this, config),
+    this.parseConfig.bind(this, config, specificSolc),
     this.connectOrRun.bind(this),
     this.startSandbox.bind(this)
   ], cb);
 };
 
-Sandbox.prototype.parseConfig = function(path, cb) {
-  configParser.parse(path, (function(err, config) {
+Sandbox.prototype.parseConfig = function(path, specificSolc, cb) {
+  configParser.parse(path, specificSolc, (function(err, config) {
     if (err) return cb(err);
     this.config = config;
     cb();

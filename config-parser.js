@@ -18,10 +18,10 @@
 var _ = require('lodash');
 var async = require('async');
 var fs = require('fs');
-var solc = require('solc');
 var SHA3Hash = require('sha3').SHA3Hash;
+var helper = require('ethereum-sandbox-helper');
 
-function parse(file, cb) {
+function parse(file, specificSolc, cb) {
   async.waterfall([
     read.bind(null, file),
     adjustValues,
@@ -47,6 +47,11 @@ function parse(file, cb) {
     if (!config.hasOwnProperty('env') || !config.env.hasOwnProperty('accounts') ||
         Object.keys(config.env).length === 0) {
       return cb('Please, add initial account(s) to ethereum.json');
+    }
+
+    if (config.hasOwnProperty('deploy')) {
+      if (!_.isArray(config.deploy)) return cb('Field deploy in ethereum.json should be an array');
+      if (!_.every(config.deploy, _.isString)) return cb('Deploy array in ethereum.json should contain only strings');
     }
     
     try {
@@ -115,33 +120,31 @@ function parse(file, cb) {
       } catch (e) {
         return cb(e);
       }
-      if (account.hasOwnProperty('source')) {
-        var input = {};
-        input[account.source] = fs.readFileSync(account.source).toString();
-        var output = solc.compile({ sources: input }, 1, function(path) {
-          try {
-            return fs.readFileSync(path);
-          } catch (e) {
-            return { error: e };
-          }
-        });
-        if (output.errors) return cb(output.errors);
+      if (account.hasOwnProperty('deploy')) {
+        if (typeof account.deploy != 'object' ||
+            !account.deploy.hasOwnProperty('contract') || typeof account.deploy.contract != 'string' ||
+            !account.deploy.hasOwnProperty('source') || typeof account.deploy.source != 'string')
+          return cb('deploy field of an account object should be an object with fields source and contract');
         
-        var compiled = findNotAbstractContracts(output.sources)
-          .map(function(name) {
-            return {
-              name: name,
-              binary: output.contracts[name].bytecode,
-              abi: JSON.parse(output.contracts[name].interface)
-            };
-          });
-
-        if (compiled.length !== 1)
-          return cb('File specified in source property of ethereum.json should contain only one contract to deploy');
-        account.runCode = compiled[0];
-      }
-      
-      cb();
+        var input = {};
+        input[account.deploy.source] = fs.readFileSync(account.deploy.source).toString();
+        var output = helper.compile('.', [account.deploy.source], specificSolc);
+        if (output.errors.length > 0) {
+          return cb('Compilation errors');
+        }
+        
+        var contract = output.contracts[account.deploy.contract];
+        if (contract) {
+          account.runCode = {
+            name: account.deploy.contract,
+            binary: contract.bytecode,
+            abi: JSON.parse(contract.interface)
+          };
+          cb();
+        } else {
+          cb('There is no contract ' + account.deploy.contract + ' in the file ' + account.deploy.source);
+        }
+      } else cb();
     }
     function value(val) {
       var type = typeof val;
