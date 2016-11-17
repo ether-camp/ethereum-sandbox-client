@@ -1,6 +1,6 @@
 {
   "name": "ethereum-sandbox-client",
-  "version": "1.0.1-beta3",
+  "version": "1.0.1-beta4",
   "license": "AGPL-3.0",
   "main": "client.js",
   "dependencies": {
